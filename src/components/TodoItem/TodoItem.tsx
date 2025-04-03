@@ -6,28 +6,15 @@ import { Todo } from '../../types/Todo';
 
 interface Props {
   todo: Todo;
-  // requestType?: TempTodoItemType;
-  // onRemoveItem?: (todo: Todo) => void;
+  isLoading: boolean;
+  onRemoveItem?: (todo: Todo) => void;
 }
-
-// const isLoading = (requestType: TempTodoItemType = 'GET') =>
-//   ['DELETE', 'POST'].includes(requestType);
 
 export const TodoItem: React.FC<Props> = ({
   todo,
-  // requestType,
-  // onRemoveItem = () => {},
+  onRemoveItem = () => {},
+  isLoading,
 }) => {
-  // const [currentOperation, setCurrentOperation] = useState(requestType);
-
-  // const handleRemoveTodoItem = () => {
-  //   setCurrentOperation('DELETE');
-  //   setTimeout(() => {
-  //     onRemoveItem(todo);
-  //     setCurrentOperation('GET');
-  //   }, 0);
-  // };
-
   return (
     <div
       data-cy="Todo"
@@ -49,18 +36,17 @@ export const TodoItem: React.FC<Props> = ({
       </span>
 
       <button
-        // onClick={handleRemoveTodoItem}
+        onClick={() => onRemoveItem(todo)}
         type="button"
         className="todo__remove"
         data-cy="TodoDelete"
       >
         ×
       </button>
-      {/* isLoading(currentOperation) */}
       <div
         data-cy="TodoLoader"
         className={classNames('modal overlay', {
-          'is-active': false,
+          'is-active': isLoading,
         })}
       >
         <div className="modal-background has-background-white-ter" />

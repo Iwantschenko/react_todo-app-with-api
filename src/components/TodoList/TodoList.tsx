@@ -5,32 +5,22 @@ import { TodoItem } from '../TodoItem';
 interface Props {
   todoList: Todo[];
   onRemoveItem: (todo: Todo) => void;
-  isRemoveAllComplited: boolean;
+  todosToLoading: Todo[];
 }
 
 export const TodoList: React.FC<Props> = ({
   todoList,
-  // onRemoveItem,
-  // isRemoveAllComplited,
+  onRemoveItem,
+  todosToLoading: loadingItems,
 }) => {
-  // const handleSetRequestType = (todo: Todo): TempTodoItemType => {
-  //   if (todo.completed) {
-  //     return 'DELETE';
-  //   }
-
-  //   return 'GET';
-  // };
-
   return (
     <>
       {todoList.map((todo: Todo) => (
         <TodoItem
           key={todo.id}
           todo={todo}
-          // // onRemoveItem={onRemoveItem}
-          // requestType={
-          //   isRemoveAllComplited ? handleSetRequestType(todo) : 'GET'
-          // }
+          onRemoveItem={onRemoveItem}
+          isLoading={loadingItems.includes(todo)}
         />
       ))}
     </>

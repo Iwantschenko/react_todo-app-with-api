@@ -25,9 +25,9 @@ export const App = () => {
   const [currentFilter, setCurrentFilter] = useState(FilterType.All);
 
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
+  const [todosToLoading, setTodosToLoading] = useState<Todo[]>([]);
 
   const [errorMessage, setErrorMessage] = useState<ErrorMessages | null>(null);
-  const [isRemoveAllComplited, setIsRemoveAllComplited] = useState(false);
 
   const getFilteredTodos = () => {
     switch (currentFilter) {
@@ -61,18 +61,16 @@ export const App = () => {
   };
 
   const callFocus = () => {
-    setTimeout(() => {
-      currentInputElementRef.current?.focus();
-    }, 0);
+    const element = currentInputElementRef.current;
+
+    if (element) {
+      setTimeout(() => {
+        element.focus();
+      }, 0);
+    }
   };
 
   const onAddTodo = async (title: string) => {
-    if (title === '') {
-      setErrorMessage(ErrorMessages.emptyTitleError);
-
-      return;
-    }
-
     const newTodo: Todo = {
       id: 0,
       title: title,
@@ -87,30 +85,58 @@ export const App = () => {
 
       setTempTodo(null);
       setTodoList(current => [...current, requestResult]);
+
+      return requestResult;
     } catch {
+      setErrorMessage(ErrorMessages.addError);
       setTempTodo(null);
-      throw new Error();
+
+      return null;
     } finally {
       callFocus();
     }
   };
 
   const onRemoveTodo = async (todoToRemove: Todo) => {
+    setTodosToLoading(prev => [...prev, todoToRemove]);
+
     try {
       await todosService.remove(todoToRemove);
       setTodoList(prev => prev.filter(todo => todo.id !== todoToRemove.id));
     } catch {
       setErrorMessage(ErrorMessages.deleteError);
+    } finally {
+      callFocus();
     }
   };
 
   const removeAllComplited = async () => {
-    setIsRemoveAllComplited(true);
-    const complitedTodo = todoList.filter(todo => todo.completed);
+    const todosToRemove = todoList.filter(todo => todo.completed);
 
-    await Promise.allSettled(complitedTodo.map(todo => onRemoveTodo(todo)));
+    setTodosToLoading(todosToRemove);
 
-    setIsRemoveAllComplited(false);
+    const results = await Promise.allSettled(
+      todosToRemove.map(todoToRemove => {
+        return todosService.remove(todoToRemove);
+      }),
+    );
+
+    const failedTodos = results
+      .map((result, i) =>
+        result.status === 'rejected' ? todosToRemove[i] : null,
+      )
+      .filter(Boolean);
+
+    if (failedTodos.length) {
+      setErrorMessage(ErrorMessages.deleteError);
+    }
+
+    setTodoList(prev =>
+      prev.filter(
+        todo => !todosToRemove.includes(todo) || failedTodos.includes(todo),
+      ),
+    );
+    callFocus();
   };
 
   useEffect(() => {
@@ -143,19 +169,20 @@ export const App = () => {
           />
           <TodoInput
             onAddTodo={onAddTodo}
+            setErrorMessage={(message: ErrorMessages) =>
+              setErrorMessage(message)
+            }
             setCurrentInputElement={handleSetInputElement}
           />
         </header>
         <section className="todoapp__main" data-cy="TodoList">
-          {todoList && (
-            <TodoList
-              todoList={getFilteredTodos()}
-              onRemoveItem={onRemoveTodo}
-              isRemoveAllComplited={isRemoveAllComplited}
-            />
-          )}
+          <TodoList
+            todoList={getFilteredTodos()}
+            onRemoveItem={onRemoveTodo}
+            todosToLoading={todosToLoading}
+          />
           {tempTodo && (
-            <TodoItem key={tempTodo.id} todo={tempTodo} requestType="POST" />
+            <TodoItem key={tempTodo.id} todo={tempTodo} isLoading={true} />
           )}
         </section>
 
