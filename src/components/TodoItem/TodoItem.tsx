@@ -3,6 +3,7 @@
 
 import classNames from 'classnames';
 import { Todo } from '../../types/Todo';
+import { useEffect, useRef, useState } from 'react';
 
 interface Props {
   todo: Todo;
@@ -17,24 +18,63 @@ export const TodoItem: React.FC<Props> = ({
   onUpdateTodo = () => {},
   isLoading,
 }) => {
-  // const inputElement = useRef<HTMLInputElement>(null);
-  // const [isUpdating, setIsUpdating] = useState(false);
+  const inputElement = useRef<HTMLInputElement>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleOnChangeCheckBox = () => {
-    const newTodo = { ...todo };
+  const handleOnClickCheckBox = () => {
+    const newTodo: Todo = { ...todo, completed: !todo.completed };
 
-    newTodo.completed = !todo.completed;
     onUpdateTodo(newTodo);
   };
 
-  // const handleOnDoubleClick = () => {
-  //   setIsUpdating(true);
-  // };
+  const handleTitleDoubleClick = () => {
+    setIsUpdating(true);
+  };
 
-  // const handleInputBlur = () => {
-  //   setIsUpdating(false);
-  //   onUpdateTodo(newTodo);
-  // };
+  const handleCloseUpdating = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (event.key === 'Escape') {
+      setIsUpdating(false);
+    }
+  };
+
+  const updateTodoItem = async () => {
+    const inputText = inputElement.current?.value.trim() || '';
+
+    if (inputText === '') {
+      onRemoveItem(todo);
+
+      return;
+    }
+
+    if (inputText === todo.title) {
+      setIsUpdating(false);
+
+      return;
+    }
+
+    const newTodo: Todo = { ...todo, title: inputText };
+
+    await onUpdateTodo(newTodo);
+    setIsUpdating(false);
+  };
+
+  const handleOnSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    updateTodoItem();
+  };
+
+  const handleOnBlur = (event: React.FocusEvent<HTMLInputElement, Element>) => {
+    event.preventDefault();
+    updateTodoItem();
+  };
+
+  useEffect(() => {
+    if (isUpdating) {
+      inputElement.current?.focus();
+    }
+  }, [isUpdating]);
 
   return (
     <div
@@ -45,7 +85,7 @@ export const TodoItem: React.FC<Props> = ({
     >
       <label className="todo__status-label">
         <input
-          onClick={() => handleOnChangeCheckBox()}
+          onClick={() => handleOnClickCheckBox()}
           data-cy="TodoStatus"
           type="checkbox"
           className="todo__status"
@@ -53,30 +93,39 @@ export const TodoItem: React.FC<Props> = ({
         />
       </label>
 
-      {/* {isUpdating ? (
-        <form>
+      {isUpdating ? (
+        <form onSubmit={handleOnSubmit}>
           <input
+            onKeyUp={handleCloseUpdating}
+            ref={inputElement}
+            onBlur={handleOnBlur}
+            defaultValue={todo.title}
             data-cy="TodoTitleField"
             type="text"
             className="todo__title-field"
             placeholder="Empty todo will be deleted"
-            value="Todo is being edited now"
           />
         </form>
-      ) : ( */}
-      <span data-cy="TodoTitle" className="todo__title">
-        {todo.title}
-      </span>
-      {/* )} */}
+      ) : (
+        <span
+          onDoubleClick={handleTitleDoubleClick}
+          data-cy="TodoTitle"
+          className="todo__title"
+        >
+          {todo.title}
+        </span>
+      )}
 
-      <button
-        onClick={() => onRemoveItem(todo)}
-        type="button"
-        className="todo__remove"
-        data-cy="TodoDelete"
-      >
-        ×
-      </button>
+      {!isUpdating && (
+        <button
+          onClick={() => onRemoveItem(todo)}
+          type="button"
+          className="todo__remove"
+          data-cy="TodoDelete"
+        >
+          ×
+        </button>
+      )}
       <div
         data-cy="TodoLoader"
         className={classNames('modal overlay', {

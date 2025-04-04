@@ -23,7 +23,7 @@ export const TodoList: React.FC<Props> = ({
           todo={todo}
           onRemoveItem={onRemoveTodo}
           onUpdateTodo={onUpdateTodo}
-          isLoading={loadingItems.includes(todo)}
+          isLoading={loadingItems.some(item => item.id === todo.id)}
         />
       ))}
     </>

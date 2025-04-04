@@ -66,6 +66,28 @@ export const App = () => {
     }
   };
 
+  const processSuccessfulTodos = async (
+    todos: Todo[],
+    serviceCall: (t: Todo) => Promise<unknown>,
+    message: ErrorMessages,
+  ) => {
+    const results = await Promise.allSettled(
+      todos.map(todoToRemove => {
+        return serviceCall(todoToRemove);
+      }),
+    );
+
+    const failedTodos = results
+      .map((result, i) => (result.status === 'rejected' ? todos[i] : null))
+      .filter(Boolean);
+
+    if (failedTodos.length) {
+      setErrorMessage(message);
+    }
+
+    return todos.filter(todo => !failedTodos.includes(todo));
+  };
+
   const onAddTodo = async (title: string) => {
     const newTodo: Todo = {
       id: 0,
@@ -106,45 +128,6 @@ export const App = () => {
     }
   };
 
-  const onUpdateTodo = async (newTodo: Todo) => {
-    try {
-      setTodosToLoading(prev => [...prev, newTodo]);
-      const updatedTodo = await todosService.update(newTodo);
-
-      setTodoList(prev =>
-        prev.map(todo => (todo.id === updatedTodo.id ? updatedTodo : todo)),
-      );
-    } catch {
-      setErrorMessage(ErrorMessages.updateError);
-    }
-  };
-
-  const isToggleAll = () => {
-    return todoList.every(todo => todo.completed);
-  };
-
-  const processSuccessfulTodos = async (
-    todos: Todo[],
-    serviceCall: (t: Todo) => Promise<unknown>,
-    message: ErrorMessages,
-  ) => {
-    const results = await Promise.allSettled(
-      todos.map(todoToRemove => {
-        return serviceCall(todoToRemove);
-      }),
-    );
-
-    const failedTodos = results
-      .map((result, i) => (result.status === 'rejected' ? todos[i] : null))
-      .filter(Boolean);
-
-    if (failedTodos.length) {
-      setErrorMessage(message);
-    }
-
-    return todos.filter(todo => !failedTodos.includes(todo));
-  };
-
   const removeAllComplited = async () => {
     const todosToRemove = todoList.filter(todo => todo.completed);
 
@@ -160,6 +143,25 @@ export const App = () => {
       prev.filter(todo => !successTodosRequest.includes(todo)),
     );
     callFocus();
+  };
+
+  const onUpdateTodo = async (newTodo: Todo) => {
+    setTodosToLoading(prev => [...prev, newTodo]);
+    try {
+      const updatedTodo = await todosService.update(newTodo);
+
+      setTodoList(prev =>
+        prev.map(todo => (todo.id === updatedTodo.id ? updatedTodo : todo)),
+      );
+    } catch {
+      setErrorMessage(ErrorMessages.updateError);
+    } finally {
+      setTodosToLoading([]);
+    }
+  };
+
+  const isToggleAll = () => {
+    return todoList.every(todo => todo.completed);
   };
 
   const onToggleAll = async () => {
@@ -184,7 +186,7 @@ export const App = () => {
       prev.map(todo => {
         const updated = successTodosRequest.find(item => item.id === todo.id);
 
-        return updated ? updated : todo;
+        return updated || todo;
       }),
     );
   };
