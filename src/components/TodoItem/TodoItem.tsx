@@ -8,13 +8,34 @@ interface Props {
   todo: Todo;
   isLoading: boolean;
   onRemoveItem?: (todo: Todo) => void;
+  onUpdateTodo?: (todo: Todo) => void;
 }
 
 export const TodoItem: React.FC<Props> = ({
   todo,
   onRemoveItem = () => {},
+  onUpdateTodo = () => {},
   isLoading,
 }) => {
+  // const inputElement = useRef<HTMLInputElement>(null);
+  // const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleOnChangeCheckBox = () => {
+    const newTodo = { ...todo };
+
+    newTodo.completed = !todo.completed;
+    onUpdateTodo(newTodo);
+  };
+
+  // const handleOnDoubleClick = () => {
+  //   setIsUpdating(true);
+  // };
+
+  // const handleInputBlur = () => {
+  //   setIsUpdating(false);
+  //   onUpdateTodo(newTodo);
+  // };
+
   return (
     <div
       data-cy="Todo"
@@ -24,6 +45,7 @@ export const TodoItem: React.FC<Props> = ({
     >
       <label className="todo__status-label">
         <input
+          onClick={() => handleOnChangeCheckBox()}
           data-cy="TodoStatus"
           type="checkbox"
           className="todo__status"
@@ -31,9 +53,21 @@ export const TodoItem: React.FC<Props> = ({
         />
       </label>
 
+      {/* {isUpdating ? (
+        <form>
+          <input
+            data-cy="TodoTitleField"
+            type="text"
+            className="todo__title-field"
+            placeholder="Empty todo will be deleted"
+            value="Todo is being edited now"
+          />
+        </form>
+      ) : ( */}
       <span data-cy="TodoTitle" className="todo__title">
         {todo.title}
       </span>
+      {/* )} */}
 
       <button
         onClick={() => onRemoveItem(todo)}

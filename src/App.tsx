@@ -32,16 +32,16 @@ export const App = () => {
   const getFilteredTodos = () => {
     switch (currentFilter) {
       case FilterType.Active:
-        return todoList.filter(todo => todo.completed === false);
+        return todoList.filter(todo => !todo.completed);
       case FilterType.Completed:
-        return todoList.filter(todo => todo.completed === true);
+        return todoList.filter(todo => todo.completed);
       default:
         return todoList;
     }
   };
 
   const getActiveTodoCount = () => {
-    return todoList.filter(todo => todo.completed === false).length;
+    return todoList.filter(todo => !todo.completed).length;
   };
 
   const hasComplitedTodos = () => {
@@ -49,11 +49,7 @@ export const App = () => {
       return true;
     }
 
-    return todoList.some(todo => todo.completed === true);
-  };
-
-  const isToggleAll = () => {
-    return todoList.every(todo => todo.completed);
+    return todoList.some(todo => todo.completed);
   };
 
   const handleSetInputElement = (newInputElement: HTMLInputElement | null) => {
@@ -110,33 +106,87 @@ export const App = () => {
     }
   };
 
-  const removeAllComplited = async () => {
-    const todosToRemove = todoList.filter(todo => todo.completed);
+  const onUpdateTodo = async (newTodo: Todo) => {
+    try {
+      setTodosToLoading(prev => [...prev, newTodo]);
+      const updatedTodo = await todosService.update(newTodo);
 
-    setTodosToLoading(todosToRemove);
+      setTodoList(prev =>
+        prev.map(todo => (todo.id === updatedTodo.id ? updatedTodo : todo)),
+      );
+    } catch {
+      setErrorMessage(ErrorMessages.updateError);
+    }
+  };
 
+  const isToggleAll = () => {
+    return todoList.every(todo => todo.completed);
+  };
+
+  const processSuccessfulTodos = async (
+    todos: Todo[],
+    serviceCall: (t: Todo) => Promise<unknown>,
+    message: ErrorMessages,
+  ) => {
     const results = await Promise.allSettled(
-      todosToRemove.map(todoToRemove => {
-        return todosService.remove(todoToRemove);
+      todos.map(todoToRemove => {
+        return serviceCall(todoToRemove);
       }),
     );
 
     const failedTodos = results
-      .map((result, i) =>
-        result.status === 'rejected' ? todosToRemove[i] : null,
-      )
+      .map((result, i) => (result.status === 'rejected' ? todos[i] : null))
       .filter(Boolean);
 
     if (failedTodos.length) {
-      setErrorMessage(ErrorMessages.deleteError);
+      setErrorMessage(message);
     }
 
+    return todos.filter(todo => !failedTodos.includes(todo));
+  };
+
+  const removeAllComplited = async () => {
+    const todosToRemove = todoList.filter(todo => todo.completed);
+
+    setTodosToLoading(todosToRemove);
+    const successTodosRequest = await processSuccessfulTodos(
+      todosToRemove,
+      todosService.remove,
+      ErrorMessages.deleteError,
+    );
+
+    setTodosToLoading([]);
     setTodoList(prev =>
-      prev.filter(
-        todo => !todosToRemove.includes(todo) || failedTodos.includes(todo),
-      ),
+      prev.filter(todo => !successTodosRequest.includes(todo)),
     );
     callFocus();
+  };
+
+  const onToggleAll = async () => {
+    const shouldComplete = todoList.some(todo => !todo.completed);
+
+    const todosToUpdate = todoList
+      .filter(todo => (shouldComplete ? !todo.completed : todo.completed))
+      .map(todo => ({
+        ...todo,
+        completed: shouldComplete,
+      }));
+
+    setTodosToLoading(todosToUpdate);
+    const successTodosRequest = await processSuccessfulTodos(
+      todosToUpdate,
+      todosService.update,
+      ErrorMessages.updateError,
+    );
+
+    setTodosToLoading([]);
+    setTodoList(prev =>
+      prev.map(todo => {
+        const updated = successTodosRequest.find(item => item.id === todo.id);
+
+        return updated ? updated : todo;
+      }),
+    );
   };
 
   useEffect(() => {
@@ -160,13 +210,16 @@ export const App = () => {
 
       <div className="todoapp__content">
         <header className="todoapp__header">
-          <button
-            type="button"
-            className={classNames('todoapp__toggle-all', {
-              active: isToggleAll(),
-            })}
-            data-cy="ToggleAllButton"
-          />
+          {todoList.length !== 0 && (
+            <button
+              onClick={() => onToggleAll()}
+              type="button"
+              className={classNames('todoapp__toggle-all', {
+                active: isToggleAll(),
+              })}
+              data-cy="ToggleAllButton"
+            />
+          )}
           <TodoInput
             onAddTodo={onAddTodo}
             setErrorMessage={(message: ErrorMessages) =>
@@ -178,7 +231,8 @@ export const App = () => {
         <section className="todoapp__main" data-cy="TodoList">
           <TodoList
             todoList={getFilteredTodos()}
-            onRemoveItem={onRemoveTodo}
+            onRemoveTodo={onRemoveTodo}
+            onUpdateTodo={onUpdateTodo}
             todosToLoading={todosToLoading}
           />
           {tempTodo && (

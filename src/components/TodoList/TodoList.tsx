@@ -4,13 +4,15 @@ import { TodoItem } from '../TodoItem';
 
 interface Props {
   todoList: Todo[];
-  onRemoveItem: (todo: Todo) => void;
+  onRemoveTodo?: (todo: Todo) => void;
+  onUpdateTodo?: (todo: Todo) => void;
   todosToLoading: Todo[];
 }
 
 export const TodoList: React.FC<Props> = ({
   todoList,
-  onRemoveItem,
+  onRemoveTodo = () => {},
+  onUpdateTodo = () => {},
   todosToLoading: loadingItems,
 }) => {
   return (
@@ -19,7 +21,8 @@ export const TodoList: React.FC<Props> = ({
         <TodoItem
           key={todo.id}
           todo={todo}
-          onRemoveItem={onRemoveItem}
+          onRemoveItem={onRemoveTodo}
+          onUpdateTodo={onUpdateTodo}
           isLoading={loadingItems.includes(todo)}
         />
       ))}
