@@ -155,6 +155,7 @@ export const App = () => {
       );
     } catch {
       setErrorMessage(ErrorMessages.updateError);
+      throw new Error();
     } finally {
       setTodosToLoading([]);
     }

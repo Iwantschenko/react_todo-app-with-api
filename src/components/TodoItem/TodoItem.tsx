@@ -56,8 +56,10 @@ export const TodoItem: React.FC<Props> = ({
 
     const newTodo: Todo = { ...todo, title: inputText };
 
-    await onUpdateTodo(newTodo);
-    setIsUpdating(false);
+    try {
+      await onUpdateTodo(newTodo);
+      setIsUpdating(false);
+    } catch {}
   };
 
   const handleOnSubmit = (event: React.FormEvent<HTMLFormElement>) => {
